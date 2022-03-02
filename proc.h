@@ -49,7 +49,7 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
-  int tickets;                 // The number of allocated tickets
+  int tickets;             // The number of allocated tickets
   int runticks;                // total number of timer ticks this process has been scheduled -> need?? unclear
   int boostsleft;              // how many more ticks will this process be boosted? -> need?? unclear
 };

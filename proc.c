@@ -74,7 +74,7 @@ myproc(void) {
   return p;
 }
 
-//PAGEBREAK: 32
+//PAGEBREAK: 32 initialize process
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
@@ -97,7 +97,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
 
-  // fix later?
+  // TODO(Yohei): fix later?
   p->tickets = 1;
   p->runticks = 0;
   // 
@@ -355,6 +355,9 @@ hold_lottery(int total_tickets)
     // return winner.
     uint tmp = 0;
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE) {
+        continue;
+      }
       tmp += p->tickets;
       if(tmp >= winner_ticket_number) {
         return p;
