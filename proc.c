@@ -338,51 +338,82 @@ wait(void)
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
 
-// returns a pointer to the lottery winner.
-struct proc *hold_lottery(int total_tickets) {
+// returns a pointer to the lottery winner. not define in syscall (just local use)
+struct proc*
+hold_lottery(int total_tickets)
+{
     if (total_tickets <= 0) {
         cprintf("this function should only be called when at least 1 process is RUNNABLE");
         return 0;
     }
 
+    struct proc* p;
     uint random_number = rand();    // This number is between 0->4 billion
-    uint winner_ticket_number = ... // Ensure that it is less than total number of tickets.
+    uint winner_ticket_number = random_number % total_tickets; // Ensure that it is less than total number of tickets.
 
     // pick the winning process from ptable.
     // return winner.
+    uint tmp = 0;
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      tmp += p->tickets;
+      if(tmp >= winner_ticket_number) {
+        return p;
+      }
+    }
 }
 
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p;  // traverse ptable
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  struct proc* win_process;
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    uint total_tickets = 0;
+    // lottary policy
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+      total_tickets += p->tickets;
     }
+
+    win_process = hold_lottery(total_tickets);
+    c->proc = win_process;
+    switchuvm(win_process);
+    win_process->state = RUNNING;
+
+    swtch(&(c->scheduler), win_process->context);
+    switchkvm();
+
+    c->proc = 0;
+    // end of lottary
+
+    // // RR policy
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //   if(p->state != RUNNABLE)
+    //     continue;
+
+    //   // Switch to chosen process.  It is the process's job
+    //   // to release ptable.lock and then reacquire it
+    //   // before jumping back to us.
+    //   c->proc = p;
+    //   switchuvm(p);
+    //   p->state = RUNNING;
+
+    //   swtch(&(c->scheduler), p->context);
+    //   switchkvm();
+
+    //   // Process is done running for now.
+    //   // It should have changed its p->state before coming back.
+    //   c->proc = 0;
+    // } // end of RR
+
     release(&ptable.lock);
 
   }
