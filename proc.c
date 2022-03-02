@@ -8,6 +8,14 @@
 #include "spinlock.h"
 #include "pstat.h"
 
+#define RAND_MAX 0x7fffffff
+uint rseed = 0;
+
+// https://rosettacode.org/wiki/Linear_congruential_generator
+uint rand() {
+  return rseed = (rseed * 1103515245 + 12345) & RAND_MAX;
+}
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -88,6 +96,12 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
+
+  // fix later?
+  p->tickets = 1;
+  p->runticks = 0;
+  // 
+
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -200,6 +214,9 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  // fix later?
+  np->tickets = curproc->tickets;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -320,6 +337,21 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+// returns a pointer to the lottery winner.
+struct proc *hold_lottery(int total_tickets) {
+    if (total_tickets <= 0) {
+        cprintf("this function should only be called when at least 1 process is RUNNABLE");
+        return 0;
+    }
+
+    uint random_number = rand();    // This number is between 0->4 billion
+    uint winner_ticket_number = ... // Ensure that it is less than total number of tickets.
+
+    // pick the winning process from ptable.
+    // return winner.
+}
+
 void
 scheduler(void)
 {
@@ -532,4 +564,59 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void
+strand(uint seed)
+{
+  rseed = seed;
+}
+
+int
+settickets(int pid, int n_tickets)
+{
+  int valid_pid = 0;
+  struct proc *p = myproc();
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->pid == pid) {
+      valid_pid = 1;
+      break;
+    }
+  }
+  release(&ptable.lock);
+
+  if (valid_pid == 0 || n_tickets < 1) {
+    return -1;
+  }
+  p->tickets = n_tickets;
+  return 0;
+}
+
+int
+getpinfo(struct pstat* ps)
+{
+  if (ps == 0) {
+    return -1;
+  }
+  int i = 0;
+  struct proc* p;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == UNUSED) {
+      ps->inuse[i] = 0;
+    } else {
+      ps->inuse[i] = 1;
+    }
+    ps->pid[i] = p->pid;
+    ps->tickets[i] = p->tickets;
+    ps->runticks[i] = p->runticks;
+    ps->boostsleft[i] = p->boostsleft;
+    i++;
+  }
+  release(&ptable.lock);
+
+  return 0;
 }
