@@ -429,6 +429,10 @@ scheduler(void)
 
     release(&ptable.lock);
 
+    // for debug
+    // struct pstat* ps = (struct pstat*)kalloc();
+    // getpinfo(ps);
+
   }
 }
 
@@ -620,7 +624,7 @@ int
 settickets(int pid, int n_tickets)
 {
   int valid_pid = 0;
-  struct proc *p = myproc();
+  struct proc *p;
 
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
@@ -629,12 +633,12 @@ settickets(int pid, int n_tickets)
       break;
     }
   }
-  release(&ptable.lock);
-
   if (valid_pid == 0 || n_tickets < 1) {
     return -1;
   }
   p->tickets = n_tickets;
+  // cprintf("n_ticket=%d, p->tickets=%d\n", n_tickets, p->tickets);  // for debug
+  release(&ptable.lock);
   return 0;
 }
 

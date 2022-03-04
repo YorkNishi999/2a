@@ -47,7 +47,7 @@ fetchstr(uint addr, char **pp)
 
 // Fetch the nth 32-bit system call argument.
 int
-argint(int n, int *ip)
+argint(int n, int *ip)  // n番目のint引数をipに入れる
 {
   return fetchint((myproc()->tf->esp) + 4 + 4*n, ip);
 }

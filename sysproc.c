@@ -107,12 +107,18 @@ int
 sys_settickets(void)
 {
   int pid;
-  int n_ticket;
-  if (argint(0, &pid) < 0 || argint(0, &n_ticket) < 0) {
+  int n_tickets;
+  if (argint(1, &n_tickets) < 0) {
+    return -1;
+  }
+
+  if (argint(0, &pid) < 0) {
     return -1;
   } 
 
-  return settickets(pid, n_ticket);
+  // cprintf("n_ticket=%d, pid=%d\n", n_tickets, pid);  // for debug 
+
+  return settickets(pid, n_tickets);
 }
 
 int
