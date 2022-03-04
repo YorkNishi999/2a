@@ -8,6 +8,14 @@
 #include "spinlock.h"
 #include "pstat.h"
 
+#define RAND_MAX 0x7fffffff
+uint rseed = 0;
+
+// https://rosettacode.org/wiki/Linear_congruential_generator
+uint rand() {
+  return rseed = (rseed * 1103515245 + 12345) & RAND_MAX;
+}
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -66,7 +74,7 @@ myproc(void) {
   return p;
 }
 
-//PAGEBREAK: 32
+//PAGEBREAK: 32 initialize process
 // Look in the process table for an UNUSED proc.
 // If found, change state to EMBRYO and initialize
 // state required to run in the kernel.
@@ -88,6 +96,12 @@ allocproc(void)
 
 found:
   p->state = EMBRYO;
+
+  // TODO(Yohei): fix later?
+  p->tickets = 1;
+  p->runticks = 0;
+  // 
+
   p->pid = nextpid++;
 
   release(&ptable.lock);
@@ -190,6 +204,8 @@ fork(void)
     return -1;
   }
 
+  np->tickets = 1;  // initalize the process's ticket
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -200,6 +216,9 @@ fork(void)
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
+
+  // fix later?
+  np->tickets = curproc->tickets;
 
   // Clear %eax so that fork returns 0 in the child.
   np->tf->eax = 0;
@@ -320,38 +339,99 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
+// returns a pointer to the lottery winner. not define in syscall (just local use)
+struct proc*
+hold_lottery(int total_tickets)
+{
+  if (total_tickets <= 0) {
+      cprintf("this function should only be called when at least 1 process is RUNNABLE");
+      return 0;
+  }
+
+  // cprintf("here\n");
+
+  struct proc* p;
+  uint random_number = rand();    // This number is between 0->4 billion
+  uint winner_ticket_number = random_number % total_tickets; // Ensure that it is less than total number of tickets.
+
+  // pick the winning process from ptable.
+  // return winner.
+  uint tmp = 0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE) {
+      continue;
+    }
+    tmp += p->tickets;
+    if(tmp >= winner_ticket_number) {
+      return p;
+    }
+  }
+  return 0;
+}
+
 void
 scheduler(void)
 {
-  struct proc *p;
+  struct proc *p;  // traverse ptable
   struct cpu *c = mycpu();
   c->proc = 0;
-  
+  struct proc* win_process;
+
   for(;;){
     // Enable interrupts on this processor.
     sti();
+    uint total_tickets = 0;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    // // lottary policy
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
+      total_tickets += p->tickets;
+      // cprintf("pid=%d, total_ticket=%d\n", p->pid, total_tickets);
 
-      swtch(&(c->scheduler), p->context);
+      win_process = hold_lottery(total_tickets);
+      c->proc = win_process;
+      switchuvm(win_process);
+      win_process->state = RUNNING;
+
+      swtch(&(c->scheduler), win_process->context);
       switchkvm();
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
       c->proc = 0;
-    }
+    }  // end of lottary
+
+    // // RR policy
+    // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    //   if(p->state != RUNNABLE)
+    //     continue;
+
+    //   // cprintf("pid=%d\n", p->pid);
+
+    //   // Switch to chosen process.  It is the process's job
+    //   // to release ptable.lock and then reacquire it
+    //   // before jumping back to us.
+    //   c->proc = p;
+    //   switchuvm(p);
+    //   p->state = RUNNING;
+
+    //   swtch(&(c->scheduler), p->context);
+    //   switchkvm();
+
+    //   // Process is done running for now.
+    //   // It should have changed its p->state before coming back.
+    //   c->proc = 0;
+    // } // end of RR
+
     release(&ptable.lock);
+
+    // for debug
+    // struct pstat* ps = (struct pstat*)kalloc();
+    // getpinfo(ps);
 
   }
 }
@@ -532,4 +612,59 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void
+srand(uint seed)
+{
+  rseed = seed;
+}
+
+int
+settickets(int pid, int n_tickets)
+{
+  int valid_pid = 0;
+  struct proc *p;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->pid == pid) {
+      valid_pid = 1;
+      break;
+    }
+  }
+  if (valid_pid == 0 || n_tickets < 1) {
+    return -1;
+  }
+  p->tickets = n_tickets;
+  // cprintf("n_ticket=%d, p->tickets=%d\n", n_tickets, p->tickets);  // for debug
+  release(&ptable.lock);
+  return 0;
+}
+
+int
+getpinfo(struct pstat* ps)
+{
+  if (ps == 0) {
+    return -1;
+  }
+  int i = 0;
+  struct proc* p;
+
+  acquire(&ptable.lock);
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state == UNUSED) {
+      ps->inuse[i] = 0;
+    } else {
+      ps->inuse[i] = 1;
+    }
+    ps->pid[i] = p->pid;
+    ps->tickets[i] = p->tickets;
+    ps->runticks[i] = p->runticks;
+    ps->boostsleft[i] = p->boostsleft;
+    i++;
+  }
+  release(&ptable.lock);
+
+  return 0;
 }
