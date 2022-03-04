@@ -204,6 +204,8 @@ fork(void)
     return -1;
   }
 
+  np->tickets = 1;  // initalize the process's ticket
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -342,27 +344,30 @@ wait(void)
 struct proc*
 hold_lottery(int total_tickets)
 {
-    if (total_tickets <= 0) {
-        cprintf("this function should only be called when at least 1 process is RUNNABLE");
-        return 0;
-    }
+  if (total_tickets <= 0) {
+      cprintf("this function should only be called when at least 1 process is RUNNABLE");
+      return 0;
+  }
 
-    struct proc* p;
-    uint random_number = rand();    // This number is between 0->4 billion
-    uint winner_ticket_number = random_number % total_tickets; // Ensure that it is less than total number of tickets.
+  // cprintf("here\n");
 
-    // pick the winning process from ptable.
-    // return winner.
-    uint tmp = 0;
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE) {
-        continue;
-      }
-      tmp += p->tickets;
-      if(tmp >= winner_ticket_number) {
-        return p;
-      }
+  struct proc* p;
+  uint random_number = rand();    // This number is between 0->4 billion
+  uint winner_ticket_number = random_number % total_tickets; // Ensure that it is less than total number of tickets.
+
+  // pick the winning process from ptable.
+  // return winner.
+  uint tmp = 0;
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state != RUNNABLE) {
+      continue;
     }
+    tmp += p->tickets;
+    if(tmp >= winner_ticket_number) {
+      return p;
+    }
+  }
+  return 0;
 }
 
 void
@@ -376,31 +381,36 @@ scheduler(void)
   for(;;){
     // Enable interrupts on this processor.
     sti();
+    uint total_tickets = 0;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    uint total_tickets = 0;
-    // lottary policy
+    // // lottary policy
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+
       total_tickets += p->tickets;
-    }
+      // cprintf("pid=%d, total_ticket=%d\n", p->pid, total_tickets);
 
-    win_process = hold_lottery(total_tickets);
-    c->proc = win_process;
-    switchuvm(win_process);
-    win_process->state = RUNNING;
+      win_process = hold_lottery(total_tickets);
+      c->proc = win_process;
+      switchuvm(win_process);
+      win_process->state = RUNNING;
 
-    swtch(&(c->scheduler), win_process->context);
-    switchkvm();
+      swtch(&(c->scheduler), win_process->context);
+      switchkvm();
 
-    c->proc = 0;
-    // end of lottary
+      c->proc = 0;
+    }  // end of lottary
 
     // // RR policy
     // for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     //   if(p->state != RUNNABLE)
     //     continue;
+
+    //   // cprintf("pid=%d\n", p->pid);
 
     //   // Switch to chosen process.  It is the process's job
     //   // to release ptable.lock and then reacquire it
@@ -601,7 +611,7 @@ procdump(void)
 }
 
 void
-strand(uint seed)
+srand(uint seed)
 {
   rseed = seed;
 }

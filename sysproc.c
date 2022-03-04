@@ -92,14 +92,14 @@ sys_uptime(void)
 }
 
 int
-sys_strand(void)
+sys_srand(void)
 {
   int seed;
   if (argint(0, &seed) < 0) {
     return -1;
   }
 
-  strand(seed);
+  srand(seed);
   return 0;
 }
 

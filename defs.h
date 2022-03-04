@@ -122,7 +122,7 @@ int             wait(void);
 void            wakeup(void*);
 void            yield(void);
 extern uint     rseed;
-void            strand(uint);
+void            srand(uint);
 int             settickets(int, int);
 int             getpinfo(struct pstat*);
 
