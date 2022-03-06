@@ -351,7 +351,8 @@ hold_lottery(int total_tickets)
       return 0;
   }
 
-  cprintf("lottary!\n");
+  // for debug
+  // cprintf("lottary!\n");
 
   struct proc* p;
   uint random_number = rand();    // This number is between 0->4 billion
@@ -366,7 +367,8 @@ hold_lottery(int total_tickets)
     }
     tmp += p->tickets;
     if(tmp >= winner_ticket_number) {
-      cprintf("tmp=%d, winner_ticket_number=%d\n", tmp, winner_ticket_number);
+      // for debug
+      // cprintf("tmp=%d, winner_ticket_number=%d\n", tmp, winner_ticket_number);
       return p;
     }
   }
@@ -398,8 +400,9 @@ scheduler(void)
         // cprintf("in[%d]\n", i);
       if (ptable.proc[i].state == RUNNABLE) {
         total_tickets += ptable.proc[i].tickets;
-        cprintf("in calc: totl ti=%d, p->id=%d, p->tickets=%d\n",
-              total_tickets, ptable.proc[i].pid, ptable.proc[i].tickets);
+        // for debug
+        // cprintf("in calc: totl ti=%d, p->id=%d, p->tickets=%d\n",
+        //       total_tickets, ptable.proc[i].pid, ptable.proc[i].tickets);
       }
     }
 
@@ -412,8 +415,9 @@ scheduler(void)
       p->runticks++;
       p->state = RUNNING;
 
-      cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
-            total_tickets, p->pid, p->tickets, p->runticks);
+      // for debug
+      // cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
+      //       total_tickets, p->pid, p->tickets, p->runticks);
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
