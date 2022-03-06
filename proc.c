@@ -429,7 +429,6 @@ scheduler(void)
           ptable.proc[i].sleepleft--;
         }
       }
-
       p = hold_lottery(total_tickets);
       c->proc = p;
       switchuvm(p);
@@ -439,6 +438,10 @@ scheduler(void)
       if(p->boostsleft > 0) {
         p->boostsleft--;
       }
+
+      // for debug
+      // cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
+      //       total_tickets, p->pid, p->tickets, p->runticks);
 
       // for debug
       // cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
