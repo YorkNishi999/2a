@@ -102,6 +102,7 @@ found:
   p->tickets = 1;
   p->runticks = 0;
   p->boostsleft = 0;
+  p->sleepleft = 0;
   // 
 
   p->pid = nextpid++;
@@ -424,6 +425,7 @@ scheduler(void)
       for (i = 0; i < NPROC; i++) {
         if (ptable.proc[i].state == SLEEPING) {
           ptable.proc[i].boostsleft++;
+          ptable.proc[i].sleepleft--;
         }
       }
 
@@ -585,6 +587,9 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  // p->sleepleft = (int)&chan;
+  // for debug
+  // cprintf("p->sleepleft=%d\n",  p->sleepleft);
 
   sched();
 
@@ -606,9 +611,18 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == SLEEPING && p->chan == chan){
+      cprintf("p->sleepleft=%d\n", p->sleepleft);
       p->state = RUNNABLE;
+    }
+    // if(p->sleepleft <= 0) {
+    //   p->state = RUNNABLE;
+    // } else {
+    //   p->sleepleft--;
+    //   p->boostsleft++;
+    // }
+  }
 }
 
 // Wake up all processes sleeping on chan.
