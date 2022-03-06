@@ -36,37 +36,37 @@ printpinfo(int pid)
 int
 main(int argc, char *argv[])
 {
-    int pid1, pid2, pid3;
+  int pid1, pid2, pid3;
 
-    if ((pid1 = fork()) == 0) {
-      int pp1 = getpid();
-      printf(0, "Process started with PID %d\n\n", pp1);
-      settickets(pp1, 10);
-      spin();
-      printpinfo(pp1);
-      printf(0, "Process with PID %d finished!\n\n", pp1);
-      exit(); 
-    }
-    else if ((pid2 = fork()) == 0) {
-      int pp2 = getpid();
-      printf(0, "Process started with PID %d\n\n", pp2);
-      settickets(pp2, 20);
-      spin();
-      printpinfo(pp2);
-      printf(0, "Process with PID %d finished!\n\n", pp2);
-      exit();
-    }
-    else if ((pid3 = fork()) == 0) {
-      int pp3 = getpid();
-      printf(0, "Process started with PID %d\n\n", pp3);
-      settickets(pp3, 30);
-      spin();
-      printpinfo(pp3);
-      printf(0, "Process with PID %d finished!\n\n", pp3);
-      exit();
-    }
-    wait();
-    wait();
-    wait();
+  if ((pid1 = fork()) == 0) {
+    int pp1 = getpid();
+    printf(0, "Process started with PID %d\n\n", pp1);
+    settickets(pp1, 10);
+    spin();
+    printpinfo(pp1);
+    printf(0, "Process with PID %d finished!\n\n", pp1);
+    exit(); 
+  }
+  else if ((pid2 = fork()) == 0) {
+    int pp2 = getpid();
+    printf(0, "Process started with PID %d\n\n", pp2);
+    settickets(pp2, 20);
+    spin();
+    printpinfo(pp2);
+    printf(0, "Process with PID %d finished!\n\n", pp2);
     exit();
+  }
+  else if ((pid3 = fork()) == 0) {
+    int pp3 = getpid();
+    printf(0, "Process started with PID %d\n\n", pp3);
+    settickets(pp3, 30);
+    spin();
+    printpinfo(pp3);
+    printf(0, "Process with PID %d finished!\n\n", pp3);
+    exit();
+  }
+  wait();
+  wait();
+  wait();
+  exit();
 }

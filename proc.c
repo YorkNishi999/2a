@@ -10,6 +10,7 @@
 
 #define RAND_MAX 0x7fffffff
 uint rseed = 0;
+// uint total_tickets = 0;
 
 // https://rosettacode.org/wiki/Linear_congruential_generator
 uint rand() {
@@ -350,7 +351,7 @@ hold_lottery(int total_tickets)
       return 0;
   }
 
-  // cprintf("here\n");
+  cprintf("lottary!\n");
 
   struct proc* p;
   uint random_number = rand();    // This number is between 0->4 billion
@@ -365,6 +366,7 @@ hold_lottery(int total_tickets)
     }
     tmp += p->tickets;
     if(tmp >= winner_ticket_number) {
+      cprintf("tmp=%d, winner_ticket_number=%d\n", tmp, winner_ticket_number);
       return p;
     }
   }
@@ -378,6 +380,7 @@ scheduler(void)
   struct cpu *c = mycpu();
   c->proc = 0;
   uint total_tickets = 0;
+  // total_tickets = 0;
 
   for(;;){
     // Enable interrupts on this processor.
@@ -386,22 +389,31 @@ scheduler(void)
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    
+    total_tickets = 0;
     // calculate all tickets
-    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-      if (p->state == RUNNABLE) {
-            total_tickets += p->tickets;
-        }
+    int i;
+    // for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    for (i = 0; i < NPROC; i++) {
+      // if(i == 63)
+        // cprintf("in[%d]\n", i);
+      if (ptable.proc[i].state == RUNNABLE) {
+        total_tickets += ptable.proc[i].tickets;
+        cprintf("in calc: totl ti=%d, p->id=%d, p->tickets=%d\n",
+              total_tickets, ptable.proc[i].pid, ptable.proc[i].tickets);
+      }
     }
 
     // lottary policy
     if (total_tickets > 0) {
-      
+
       p = hold_lottery(total_tickets);
       c->proc = p;
       switchuvm(p);
       p->runticks++;
       p->state = RUNNING;
+
+      cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
+            total_tickets, p->pid, p->tickets, p->runticks);
 
       swtch(&(c->scheduler), p->context);
       switchkvm();
@@ -439,7 +451,29 @@ scheduler(void)
     // struct pstat* ps = (struct pstat*)kalloc();
     // getpinfo(ps);
 
+    // for debug below
+    // struct pstat* ps;
+    // ps = (struct pstat*)kalloc();
+    // // struct proc* p;
+    // int i = 0;
+    // for(i = 0; i<10; i++) {
+    //   if (ps->pid[i] != 0) {
+    //   getpinfo(ps);
+    //   cprintf("ps->pid[%d]=%d\n", i, ps->pid[i]);
+    //   }
+    // }
   }
+
+
+
+// struct pstat {
+//   int inuse[NPROC]; // whether this slot of the process table is in use (1 or 0)
+//   int pid[NPROC]; // PID of each process
+//   int tickets[NPROC];  // how many tickets does this process have?
+//   int runticks[NPROC];  // total number of timer ticks this process has been scheduled
+//   int boostsleft[NPROC]; // how many more ticks will this process be boosted?
+// };
+
 }
 
 // Enter scheduler.  Must hold only ptable.lock

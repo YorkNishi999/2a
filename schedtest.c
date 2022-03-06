@@ -26,6 +26,7 @@ main(int argc, char *argv[])
     exit();
   }
 
+  printf(1, "here, I am schedtest\n");
   // fork A
   int pidA = fork();
   char *argsA[3] = {"loop", argv[2], 0};
