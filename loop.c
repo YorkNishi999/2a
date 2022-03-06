@@ -24,7 +24,8 @@ main(int argc, char *argv[])
 
   // when waked up, do an infinite loop
   int i = 0, j = 0;
-  while (i < 800000000) {
+  // while (i < 800000000) {
+  while (i < 1000) {
     j += i * j + 1;
     i++;
   }
