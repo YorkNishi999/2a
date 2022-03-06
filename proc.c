@@ -103,6 +103,7 @@ found:
   p->runticks = 0;
   p->boostsleft = 0;
   p->sleepleft = 0;
+  // cprintf("init sleepleft\n");
   // 
 
   p->pid = nextpid++;
@@ -413,8 +414,8 @@ scheduler(void)
           total_tickets += ptable.proc[i].tickets;
         }
         // for debug
-        // cprintf("in calc: totl ti=%d, p->id=%d, p->tickets=%d\n",
-        //       total_tickets, ptable.proc[i].pid, ptable.proc[i].tickets);
+        // cprintf("in calc: p->sleepleft=%d, p->id=%d, p->tickets=%d\n",
+        //       ptable.proc[i].sleepleft, ptable.proc[i].pid, ptable.proc[i].tickets);
       }
     }
 
@@ -612,16 +613,16 @@ wakeup1(void *chan)
   struct proc *p;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    if(p->state == SLEEPING && p->chan == chan){
-      cprintf("p->sleepleft=%d\n", p->sleepleft);
-      p->state = RUNNABLE;
-    }
-    // if(p->sleepleft <= 0) {
+    // if(p->state == SLEEPING && p->chan == chan){
     //   p->state = RUNNABLE;
-    // } else {
-    //   p->sleepleft--;
-    //   p->boostsleft++;
     // }
+    if(p->sleepleft <= 0 && p->chan == chan) {
+      p->state = RUNNABLE;
+    } 
+    if(p->sleepleft > 0) {
+      p->sleepleft--;
+      p->boostsleft++;
+    }
   }
 }
 
