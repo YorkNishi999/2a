@@ -100,6 +100,7 @@ found:
   // TODO(Yohei): fix later?
   p->tickets = 1;
   p->runticks = 0;
+  p->boostsleft = 0;
   // 
 
   p->pid = nextpid++;
@@ -376,33 +377,38 @@ scheduler(void)
   struct proc *p;  // traverse ptable
   struct cpu *c = mycpu();
   c->proc = 0;
-  struct proc* win_process;
+  uint total_tickets = 0;
 
   for(;;){
     // Enable interrupts on this processor.
     sti();
-    uint total_tickets = 0;
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
 
-    // // lottary policy
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
+    
+    // calculate all tickets
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state == RUNNABLE) {
+            total_tickets += p->tickets;
+        }
+    }
 
-      total_tickets += p->tickets;
-      // cprintf("pid=%d, total_ticket=%d\n", p->pid, total_tickets);
+    // lottary policy
+    if (total_tickets > 0) {
+      
+      p = hold_lottery(total_tickets);
+      c->proc = p;
+      switchuvm(p);
+      p->runticks++;
+      p->state = RUNNING;
 
-      win_process = hold_lottery(total_tickets);
-      c->proc = win_process;
-      switchuvm(win_process);
-      win_process->state = RUNNING;
-
-      swtch(&(c->scheduler), win_process->context);
+      swtch(&(c->scheduler), p->context);
       switchkvm();
 
       c->proc = 0;
+      total_tickets = 0;
+
     }  // end of lottary
 
     // // RR policy
@@ -634,6 +640,7 @@ settickets(int pid, int n_tickets)
     }
   }
   if (valid_pid == 0 || n_tickets < 1) {
+    release(&ptable.lock);
     return -1;
   }
   p->tickets = n_tickets;
