@@ -102,6 +102,8 @@ found:
   p->tickets = 1;
   p->runticks = 0;
   p->boostsleft = 0;
+  p->sleepleft = 0;
+  // cprintf("init sleepleft\n");
   // 
 
   p->pid = nextpid++;
@@ -365,7 +367,12 @@ hold_lottery(int total_tickets)
     if(p->state != RUNNABLE) {
       continue;
     }
-    tmp += p->tickets;
+    //check if need boost
+    if(p->boostsleft > 0)
+      tmp += p->tickets*2;
+    else
+      tmp += p->tickets;
+
     if(tmp >= winner_ticket_number) {
       // for debug
       // cprintf("tmp=%d, winner_ticket_number=%d\n", tmp, winner_ticket_number);
@@ -398,22 +405,43 @@ scheduler(void)
     for (i = 0; i < NPROC; i++) {
       // if(i == 63)
         // cprintf("in[%d]\n", i);
+      // check if need boost
       if (ptable.proc[i].state == RUNNABLE) {
-        total_tickets += ptable.proc[i].tickets;
+        if(ptable.proc[i].boostsleft > 0) {
+          total_tickets += ptable.proc[i].tickets*2;
+        }
+        else {
+          total_tickets += ptable.proc[i].tickets;
+        }
         // for debug
-        // cprintf("in calc: totl ti=%d, p->id=%d, p->tickets=%d\n",
-        //       total_tickets, ptable.proc[i].pid, ptable.proc[i].tickets);
+        // cprintf("in calc: p->sleepleft=%d, p->id=%d, p->tickets=%d\n",
+        //       ptable.proc[i].sleepleft, ptable.proc[i].pid, ptable.proc[i].tickets);
       }
     }
 
     // lottary policy
     if (total_tickets > 0) {
 
+      // increment boost number for sleeping process
+      for (i = 0; i < NPROC; i++) {
+        if (ptable.proc[i].state == SLEEPING) {
+          ptable.proc[i].boostsleft++;
+          ptable.proc[i].sleepleft--;
+        }
+      }
       p = hold_lottery(total_tickets);
       c->proc = p;
       switchuvm(p);
       p->runticks++;
       p->state = RUNNING;
+      //decrement boost number if has been boosted
+      if(p->boostsleft > 0) {
+        p->boostsleft--;
+      }
+
+      // for debug
+      // cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
+      //       total_tickets, p->pid, p->tickets, p->runticks);
 
       // for debug
       // cprintf("totaltickets=%d, p->id=%d, p->tickets=%d, p->runticks=%d\n",
@@ -563,6 +591,9 @@ sleep(void *chan, struct spinlock *lk)
   // Go to sleep.
   p->chan = chan;
   p->state = SLEEPING;
+  // p->sleepleft = (int)&chan;
+  // for debug
+  // cprintf("p->sleepleft=%d\n",  p->sleepleft);
 
   sched();
 
@@ -584,9 +615,18 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    // if(p->state == SLEEPING && p->chan == chan){
+    //   p->state = RUNNABLE;
+    // }
+    if(p->sleepleft <= 0 && p->chan == chan) {
       p->state = RUNNABLE;
+    } 
+    if(p->sleepleft > 0) {
+      p->sleepleft--;
+      p->boostsleft++;
+    }
+  }
 }
 
 // Wake up all processes sleeping on chan.

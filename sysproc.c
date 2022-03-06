@@ -72,6 +72,9 @@ sys_sleep(void)
       release(&tickslock);
       return -1;
     }
+    // ticksを現在のプロセスのsleepleftに代入する
+    myproc()->sleepleft = n;  // how get argument?
+    // cprintf("n=%d, tick0=%d, &ticks=%d\n", n, ticks0, &ticks); n: number of sleep tick
     sleep(&ticks, &tickslock);
   }
   release(&tickslock);

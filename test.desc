@@ -1,44 +1,44 @@
 ==> 1.desc <== -> pass 3/3
 xv6 compiles and boots up correctly. 
 
-==> 2.desc <==
+==> 2.desc <== -> pass 3/5
 Test getpinfo() when pstat is valid. 
 
 ==> 3.desc <== -> pass 3/3
 Test if settickets() correctly sets the number of tickets
 
-==> 4.desc <==
+==> 4.desc <== -> pass 3/5
 Test srand(), and test setticket(), and getpinfo() with invalid arguments
 
 ==> 5.desc <== -> pass 3/3
 Test if tickets are initialized correctly
 
-==> 6.desc <==
+==> 6.desc <== -> pass 3/5
 Test if processes have runticks proportional to their tickets
 
-==> 7.desc <==
+==> 7.desc <== -> pass 3/5
 Test if the lottery scheduler prevents starvation
 
-==> 8.desc <==
+==> 8.desc <== -> pass 3/5
 Test if processes actually runs for number of ticks proportional to their tickets
 
 ----------------part 2---------------
 
-==> 9.desc <==
+==> 9.desc <== -> pass 3/6
 Test if the waiting processes are given the correct number of boost ticks
 
-==> 10.desc <==
+==> 10.desc <== -> pass 3/6
 Test if the child process is correctly initialized when the parent is boosted
 
-==> 11.desc <==
+==> 11.desc <== 
 Test if sleeping processes are given the correct amount of boost ticks: this requires improving the sleep/wake mechanism
 
-==> 12.desc <==
+==> 12.desc <== -> pass 3/6
 Test if a process on boost as more runticks than another process with the same number of tickets
 
-==> 13.desc <==
+==> 13.desc <== -> pass 3/6
 Test if a process on boost actually runs for ticks proportional to double of its base number of tickets
 
-==> 14.desc <==
+==> 14.desc <== -> pass 3/6
 Test with multiple processes
 
